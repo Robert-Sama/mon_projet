@@ -105,7 +105,6 @@ def find_kmers_with_seed(kmers, df_dataBase, seed):
     return matches
 
 
-
 #4- On extend HSP des deux côtés
 def extend_hsp(hsp, query_seq, db_seq, E=4):
     #On récupère les données de hsp.
@@ -396,8 +395,15 @@ def calculate_bitscore_and_evalue(hsp, total_db_size, query_size, ss=1e-3):
     ln2 = math.log(2)  # ln(2)
 
     # Calcul du bitscore
-    B = (lambda_ * S - math.log(K)) / ln2
-    B = max(round(B), 0)  # Bitscore ne peut pas être négatif
+    #B = (lambda_ * S - math.log(K)) / ln2
+    #B = max(round(B), 0)  # Bitscore ne peut pas être négatif
+    B = max(round((lambda_ * S - math.log(K)) / ln2), 0)
+
+    #Vérifications
+    if S < 0:
+        print(f"Warning: Negative score {S} detected")
+    if B <= 0:
+        print(f"Warning: Non-positive bitscore {B}")
 
     # Calcul de la e-value
     evalue = total_db_size * query_size * (2 ** -B)
