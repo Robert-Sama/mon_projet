@@ -273,9 +273,8 @@ def merge_overlapping_hsps(hsps):
             new_aligned_db = last["aligned_db"][:hsp["db_start"] - last["db_start"]] + hsp["aligned_db"]
             overlap_len = last["query_end"] - hsp["query_start"] + 1
             if overlap_len > 0:
-                new_aligned_query = last["aligned_query"] + hsp["aligned_query"][overlap_len:]
-                new_aligned_db = last["aligned_db"] + hsp["aligned_db"][overlap_len:]
-
+                new_aligned_query = (last["aligned_query"][: -overlap_len] + hsp["aligned_query"])
+                new_aligned_db = (last["aligned_db"][: -overlap_len] + hsp["aligned_db"])
 
             # Combiner les scores
             new_score = last["score"] + hsp["score"]
@@ -327,20 +326,20 @@ def prepare_hsps(extensions):
 
 
 #8- On calc le bit score
+"""Vieille Version
 def calculate_bitscore_and_evalue(hsp, total_db_size, query_size, ss=1e-3):
-    """
-    Calcule le bitscore et la e-value d'un HSP.
+    
+    # Calcule le bitscore et la e-value d'un HSP.
 
-    Args:
-    - hsp (dict): Un HSP avec les champs "score" et autres.
-    - total_db_size (int): Taille totale des séquences dans la base de données.
-    - query_size (int): Taille de la séquence cible.
-    - ss (float): Seuil significatif pour la e-value.
+    # Args:
+    # - hsp (dict): Un HSP avec les champs "score" et autres.
+    # - total_db_size (int): Taille totale des séquences dans la base de données.
+    # - query_size (int): Taille de la séquence cible.
+    # - ss (float): Seuil significatif pour la e-value.
 
-    Returns:
-    - dict: HSP enrichi avec les champs "bitscore", "evalue", et "significant".
-    """
-    import math
+    # Returns:
+    # - dict: HSP enrichi avec les champs "bitscore", "evalue", et "significant".
+    
 
     S = hsp["score"]  # Score brut
     K = 0.192  # Constante
@@ -376,9 +375,46 @@ def calculate_bitscore_and_evalue(hsp, total_db_size, query_size, ss=1e-3):
     hsp["significant"] = significant
 
     return hsp
+"""
+
+def calculate_bitscore_and_evalue(hsp, total_db_size, query_size, ss=1e-3):
+    """
+    Calcule le bitscore et la e-value d'un HSP.
+
+    Args:
+        hsp (dict): Un HSP avec les champs "score" et autres.
+        total_db_size (int): Taille totale des séquences dans la base de données.
+        query_size (int): Taille de la séquence cible.
+        ss (float): Seuil significatif pour la e-value.
+
+    Returns:
+        dict: HSP enrichi avec les champs "bitscore", "evalue", et "significant".
+    """
+    S = hsp["score"]  # Score brut
+    K = 0.176  # Constante
+    lambda_ = 0.192  # Constante
+    ln2 = math.log(2)  # ln(2)
+
+    # Calcul du bitscore
+    B = (lambda_ * S - math.log(K)) / ln2
+    B = max(round(B), 0)  # Bitscore ne peut pas être négatif
+
+    # Calcul de la e-value
+    evalue = total_db_size * query_size * (2 ** -B)
+
+    # Vérifier si l'HSP est significatif
+    significant = evalue <= ss
+
+    # Ajouter les informations au HSP
+    hsp["bitscore"] = B
+    hsp["evalue"] = evalue
+    hsp["significant"] = significant
+
+    return hsp
 
 
 #9- On trie les hsp
+"""Vieille Version
 def process_significant_hsps(row, total_db_size, ss=1e-3):
     query_size = len(row["Sequence"])
     fused_hsps = row["FusedHSP"]
@@ -398,7 +434,30 @@ def process_significant_hsps(row, total_db_size, ss=1e-3):
         return best_hsp
     else:
         return None
+"""
 
+def process_significant_hsps(row, total_db_size, ss=1e-3):
+    query_size = len(row["Sequence"])
+    fused_hsps = row["FusedHSP"]
+
+    # Calculer bitscore et e-value pour chaque HSP
+    enriched_hsps = [
+        calculate_bitscore_and_evalue(hsp, total_db_size, query_size, ss)
+        for hsp in fused_hsps
+    ]
+
+    # Filtrer les HSPs significatifs
+    significant_hsps = [h for h in enriched_hsps if h["significant"]]
+
+    # Ne garder que le meilleur HSP significatif par bitscore
+    if significant_hsps:
+        best_hsp = max(significant_hsps, key=lambda h: h["bitscore"])
+        return best_hsp
+    else:
+        # Valeur par défaut
+        return {"query_start": 0, "query_end": 0, "db_start": 0, "db_end": 0,
+                "aligned_query": "", "aligned_db": "", "score": 0,
+                "bitscore": 0, "evalue": float("inf"), "significant": False}
 
 
 #DÉFINITIONS :
