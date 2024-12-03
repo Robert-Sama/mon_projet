@@ -347,85 +347,85 @@ def process_significant_hsps(row, total_db_size, ss=1e-3):
 
 
 
-# #DÉFINITIONS :
-# # S = séquences
-# # g = graine
-# # k = taille des mots
-# # |g| = k
-# #E = pénalité
+#DÉFINITIONS :
+# S = séquences
+# g = graine
+# k = taille des mots
+# |g| = k
+#E = pénalité
 
-# #S appartient à u_seq
-# g = "11111111111"
-# k = len(g)
-# E = 4
+#S appartient à u_seq
+g = "11111111111"
+k = len(g)
+E = 4
 
-# """ 
-# Section pour utiliser les fonctions
-# """
-# #1-On charge les fichiers fasta
-# df_dataBase = read_fasta("tRNAs.fasta")
-# u_seq = read_fasta("unknown.fasta")
+""" 
+Section pour utiliser les fonctions
+"""
+#1-On charge les fichiers fasta
+df_dataBase = read_fasta("tRNAs.fasta")
+u_seq = read_fasta("unknown.fasta")
 
-# total_db_size = df_dataBase["Sequence"].apply(len).sum()
-
-
-# #2-On trouve les kmers
-# #Pour toutes les séquences, on ajoute leurs kmers à la df
-# #On génère des mots de taille k
-# u_seq["Kmers"] = u_seq["Sequence"].apply(
-#     lambda seq: generate_kmers(seq, k)
-#     )
-
-# #3-On trouve les kmers dans la db.
-# u_seq["Matches"] = u_seq["Kmers"].apply(
-#     lambda kmers: find_kmers_in_db(kmers, df_dataBase)
-#     )
+total_db_size = df_dataBase["Sequence"].apply(len).sum()
 
 
-# #Les matchs sont enregistrés de la facon suivante :
-# """ 
-# EXEMPLE: ('GGTTCGAATCC', 52, 'M|cat|Mesostigma_viride', 52),
-# 1- Le k-mer trouvé (GGTTCGAATCC).
-# 2- La position du k-mer dans la séquence cible (52).
-# 3- L'identifiant complet de la séquence dans la base (M|cat|Mesostigma_viride ou M|cat|Mesostigma_viride_2).
-# 4- La position dans la séquence de la base (52, 53, etc.).
-# """
+#2-On trouve les kmers
+#Pour toutes les séquences, on ajoute leurs kmers à la df
+#On génère des mots de taille k
+u_seq["Kmers"] = u_seq["Sequence"].apply(
+    lambda seq: generate_kmers(seq, k)
+    )
 
-# #4/5-On extend les HSP
-# u_seq["Extensions"] = u_seq.apply(
-#     lambda row: process_hsp_extensions(row, df_dataBase, E=4), axis=1
-#     )
+#3-On trouve les kmers dans la db.
+u_seq["Matches"] = u_seq["Kmers"].apply(
+    lambda kmers: find_kmers_in_db(kmers, df_dataBase)
+    )
 
 
-# #6/7-On merge les HSP
-# #Mais, on doit convertir avant.
-# u_seq["FusedHSP"] = u_seq["Extensions"].apply(
-#     lambda extensions: merge_overlapping_hsps(prepare_hsps(extensions))
-# )
+#Les matchs sont enregistrés de la facon suivante :
+""" 
+EXEMPLE: ('GGTTCGAATCC', 52, 'M|cat|Mesostigma_viride', 52),
+1- Le k-mer trouvé (GGTTCGAATCC).
+2- La position du k-mer dans la séquence cible (52).
+3- L'identifiant complet de la séquence dans la base (M|cat|Mesostigma_viride ou M|cat|Mesostigma_viride_2).
+4- La position dans la séquence de la base (52, 53, etc.).
+"""
 
-# #8/9-On ajoute le best HSP au df
-# u_seq["BestHSP"] = u_seq.apply(
-#     lambda row: process_significant_hsps(row, total_db_size, ss=1e-3),
-#     axis=1
-# )
+#4/5-On extend les HSP
+u_seq["Extensions"] = u_seq.apply(
+    lambda row: process_hsp_extensions(row, df_dataBase, E=4), axis=1
+    )
 
 
-# """SECTION VISUALISTION : """
-# #RAPPEL : voici comment la df des S (u_seq) est construite : 
-# # ID, Anticodon, Info, Sequence, Kmers, Matches, Extensions, FusedHSP, BestHSP
-# #1-Print
-# #Boucle de vérification qui passe à travers chaque rangées (aka change S)
-# # for i in range(len(u_seq)):
-# #     print("Pour la séquence S : " + u_seq.loc[i, 'Sequence'])
-# #     print("On a les caractéristiques suivantes : ")
-# #     print("Kmers : \n" + str(u_seq.loc[i, 'Kmers']))
-# #     print("Matches : \n" + str(u_seq.loc[i, 'Matches']))
-# #     print("Extensions : \n" + str(u_seq.loc[i, 'Extensions']))
-# #     print("FusedHSP : \n" + str(u_seq.loc[i, 'FusedHSP']))
-# #     print("BestHSP : \n" + str(u_seq.loc[i, 'BestHSP']))
+#6/7-On merge les HSP
+#Mais, on doit convertir avant.
+u_seq["FusedHSP"] = u_seq["Extensions"].apply(
+    lambda extensions: merge_overlapping_hsps(prepare_hsps(extensions))
+)
+
+#8/9-On ajoute le best HSP au df
+u_seq["BestHSP"] = u_seq.apply(
+    lambda row: process_significant_hsps(row, total_db_size, ss=1e-3),
+    axis=1
+)
+
+
+"""SECTION VISUALISTION : """
+#RAPPEL : voici comment la df des S (u_seq) est construite : 
+# ID, Anticodon, Info, Sequence, Kmers, Matches, Extensions, FusedHSP, BestHSP
+#1-Print
+#Boucle de vérification qui passe à travers chaque rangées (aka change S)
+# for i in range(len(u_seq)):
+#     print("Pour la séquence S : " + u_seq.loc[i, 'Sequence'])
+#     print("On a les caractéristiques suivantes : ")
+#     print("Kmers : \n" + str(u_seq.loc[i, 'Kmers']))
+#     print("Matches : \n" + str(u_seq.loc[i, 'Matches']))
+#     print("Extensions : \n" + str(u_seq.loc[i, 'Extensions']))
+#     print("FusedHSP : \n" + str(u_seq.loc[i, 'FusedHSP']))
+#     print("BestHSP : \n" + str(u_seq.loc[i, 'BestHSP']))
     
-# #2-Fichiers
-# #Chaque fois qu'on modifie la df, on génère un csv pour la visualiser
-# u_seq.to_csv("repr_DF", index=False)
-# df_dataBase.to_csv("df_DataBase", index=False)
+#2-Fichiers
+#Chaque fois qu'on modifie la df, on génère un csv pour la visualiser
+u_seq.to_csv("repr_DF", index=False)
+df_dataBase.to_csv("df_DataBase", index=False)
 
