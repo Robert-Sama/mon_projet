@@ -1,0 +1,31 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+h1 {
+    color: #333;
+}
+form {
+    margin-bottom: 20px;
+}
+#results {
+    margin-top: 20px;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+}
+.section {
+    border: 1px solid #ddd;
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.section h2 {
+    margin-top: 0;
+}
+
+.section pre {
+    background-color: #eee;
+    padding: 10px;
+    overflow-x: auto;
+}

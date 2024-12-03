@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLAST Tool</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>PLAST Tool</h1>
+    <form id="file-form" method="post" enctype="multipart/form-data">
+        <!-- Fichiers -->
+        <label for="query_file">Upload Query File (e.g., unknown.fasta):</label>
+        <input type="file" id="query_file" name="query_file" accept=".fasta" required><br><br>
+        <label for="db_file">Upload Database File (e.g., tRNAs.fasta):</label>
+        <input type="file" id="db_file" name="db_file" accept=".fasta" required><br><br>
+
+        <!-- Variables -->
+        <label for="g">Graine (g):</label>
+        <input type="text" id="g" name="g" value="11111111111" required><br><br>
+
+        <label for="E">Pénalité (E):</label>
+        <input type="number" id="E" name="E" value="4" required><br><br>
+
+        <label for="ss">Seuil de significativité (ss):</label>
+        <input type="number" id="ss" name="ss" value="0.001" step="0.0001" required><br><br>
+
+        <!-- Soumettre -->
+        <button type="submit">Process</button>
+    </form>
+    <div id="results"></div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
