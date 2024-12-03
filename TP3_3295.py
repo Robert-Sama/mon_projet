@@ -27,16 +27,26 @@ def read_fasta(file_path):
 
 #2-On fait une fonction pour générer les kmers de taille k avec leur pos dans la seq
 #On retourne la db avec un nouvelle col
+"""Vieille Version
 def generate_kmers(sequence, k):
     kmers = []
     for i in range(len(sequence) - k + 1):
         kmer = sequence[i:i + k]
         kmers.append((kmer, i))
     return kmers
+""" 
+def generate_kmers_with_seed(sequence, seed):
+    k = len(seed)
+    kmers = []
+    for i in range(len(sequence) - k + 1):
+        kmer = sequence[i:i + k]
+        kmers.append((kmer, i))
+    return kmers #, seed
 
 
 #3-On recherche les kmers dans la base de donnée
 # retourne les positions où il est trouvé
+"""Vieille Version
 def find_kmers_in_db(kmers, df_dataBase):
     #On initie la variable des match
     matches = set()
@@ -61,6 +71,39 @@ def find_kmers_in_db(kmers, df_dataBase):
                 #print("n kmer : " + db_seq[db_pos:db_pos+11])
                 
     return list(matches)  # Convertir le set en liste
+""" 
+def find_kmers_with_seed(kmers, df_dataBase, seed):
+    """
+    Recherche des k-mers dans la base de données en respectant la graine.
+
+    Args:
+        kmers (list): Liste de tuples (k-mer, position).
+        df_dataBase (DataFrame): Base de données contenant les séquences.
+        seed (str): Graine (ex. "111010010100").
+
+    Returns:
+        list: Liste de correspondances sous forme (kmer, query_pos, db_id, db_anticodon, db_pos).
+    """
+    matches = []
+    k = len(seed)
+    for kmer, query_pos in kmers:
+        for _, row in df_dataBase.iterrows():
+            db_seq = row["Sequence"]
+            db_id = row["ID"]
+            db_anticodon = row["Anticodon"]
+
+            # Rechercher des correspondances
+            for i in range(len(db_seq) - k + 1):
+                db_kmer = db_seq[i:i + k]
+                # Vérifier la correspondance selon la graine
+                match = all(
+                    (kmer[j] == db_kmer[j]) if seed[j] == "1" else True
+                    for j in range(k)
+                )
+                if match:
+                    matches.append((kmer, query_pos, db_id, db_anticodon, i))
+    return matches
+
 
 
 #4- On extend HSP des deux côtés
@@ -216,6 +259,7 @@ def merge_overlapping_hsps(hsps):
             new_db_end = max(last["db_end"], hsp["db_end"])
 
             # Fusionner les alignements
+            """
             new_aligned_query = (
                 last["aligned_query"][: hsp["query_start"] - last["query_start"]]
                 + hsp["aligned_query"]
@@ -224,6 +268,14 @@ def merge_overlapping_hsps(hsps):
                 last["aligned_db"][: hsp["db_start"] - last["db_start"]]
                 + hsp["aligned_db"]
             )
+            """
+            new_aligned_query = last["aligned_query"][:hsp["query_start"] - last["query_start"]] + hsp["aligned_query"]
+            new_aligned_db = last["aligned_db"][:hsp["db_start"] - last["db_start"]] + hsp["aligned_db"]
+            overlap_len = last["query_end"] - hsp["query_start"] + 1
+            if overlap_len > 0:
+                new_aligned_query = last["aligned_query"] + hsp["aligned_query"][overlap_len:]
+                new_aligned_db = last["aligned_db"] + hsp["aligned_db"][overlap_len:]
+
 
             # Combiner les scores
             new_score = last["score"] + hsp["score"]
@@ -313,6 +365,8 @@ def calculate_bitscore_and_evalue(hsp, total_db_size, query_size, ss=1e-3):
     else:
         evalue = math.exp(ln_evalue)
 
+    #evalue = total_db_size * query_size * (2 ** (-B))
+
     # Vérifier si l'HSP est significatif
     significant = evalue <= ss
 
@@ -372,6 +426,7 @@ total_db_size = df_dataBase["Sequence"].apply(len).sum()
 #2-On trouve les kmers
 #Pour toutes les séquences, on ajoute leurs kmers à la df
 #On génère des mots de taille k
+"""Vieille Version
 u_seq["Kmers"] = u_seq["Sequence"].apply(
     lambda seq: generate_kmers(seq, k)
     )
@@ -380,6 +435,13 @@ u_seq["Kmers"] = u_seq["Sequence"].apply(
 u_seq["Matches"] = u_seq["Kmers"].apply(
     lambda kmers: find_kmers_in_db(kmers, df_dataBase)
     )
+"""
+u_seq["Kmers"] = u_seq["Sequence"].apply(lambda seq: generate_kmers_with_seed(seq, g))
+
+# Recherche des k-mers dans la base
+u_seq["Matches"] = u_seq.apply(
+    lambda row: find_kmers_with_seed(row["Kmers"], df_dataBase, g), axis=1
+)
 
 
 #Les matchs sont enregistrés de la facon suivante :
@@ -412,20 +474,29 @@ u_seq["BestHSP"] = u_seq.apply(
 
 """SECTION VISUALISTION : """
 #RAPPEL : voici comment la df des S (u_seq) est construite : 
-# ID, Anticodon, Info, Sequence, Kmers, Matches, Extensions, FusedHSP, BestHSP
+#ID, Anticodon, Info, Sequence, Kmers, Matches, Extensions, FusedHSP, BestHSP
 #1-Print
 #Boucle de vérification qui passe à travers chaque rangées (aka change S)
-# for i in range(len(u_seq)):
-#     print("Pour la séquence S : " + u_seq.loc[i, 'Sequence'])
-#     print("On a les caractéristiques suivantes : ")
-#     print("Kmers : \n" + str(u_seq.loc[i, 'Kmers']))
-#     print("Matches : \n" + str(u_seq.loc[i, 'Matches']))
-#     print("Extensions : \n" + str(u_seq.loc[i, 'Extensions']))
-#     print("FusedHSP : \n" + str(u_seq.loc[i, 'FusedHSP']))
-#     print("BestHSP : \n" + str(u_seq.loc[i, 'BestHSP']))
+for i in range(len(u_seq)):
+    print("Pour la séquence S : " + u_seq.loc[i, 'Sequence'])
+    print("On a les caractéristiques suivantes : ")
+    print("Kmers : \n" + str(u_seq.loc[i, 'Kmers']))
+    print("Matches : \n" + str(u_seq.loc[i, 'Matches']))
+    print("Extensions : \n" + str(u_seq.loc[i, 'Extensions']))
+    print("FusedHSP : \n" + str(u_seq.loc[i, 'FusedHSP']))
+    print("BestHSP : \n" + str(u_seq.loc[i, 'BestHSP']))
     
 #2-Fichiers
 #Chaque fois qu'on modifie la df, on génère un csv pour la visualiser
 u_seq.to_csv("repr_DF", index=False)
 df_dataBase.to_csv("df_DataBase", index=False)
 
+"""Vérification rapide de merge_overlapping_hsps"""
+# hsps = [
+#     {"query_start": 10, "query_end": 20, "db_start": 15, "db_end": 25, 
+#      "aligned_query": "ACGTACGTAC", "aligned_db": "ACGTACGTAC", "score": 50},
+#     {"query_start": 18, "query_end": 30, "db_start": 23, "db_end": 35, 
+#      "aligned_query": "TACGTTACGTA", "aligned_db": "TACGTTACGTA", "score": 60},
+# ]
+# merged = merge_overlapping_hsps(hsps)
+# print(merged)

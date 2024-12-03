@@ -22,11 +22,11 @@ def process_files(query_path, db_path, g, E, ss):
 
     # Étape 1 : Générer les kmers
     logging.info("Génération des kmers")
-    u_seq["Kmers"] = u_seq["Sequence"].apply(lambda seq: generate_kmers(seq, k))
+    u_seq["Kmers"] = u_seq["Sequence"].apply(lambda seq: generate_kmers_with_seed(seq, k))
 
     # Étape 2 : Trouver les kmers dans la base
     logging.info("Recherche des kmers dans la base")
-    u_seq["Matches"] = u_seq["Kmers"].apply(lambda kmers: find_kmers_in_db(kmers, df_dataBase))
+    u_seq["Matches"] = u_seq["Kmers"].apply(lambda kmers: find_kmers_with_seed(kmers, df_dataBase))
 
     # Étape 3 : Étendre les HSPs
     logging.info("Extension des HSPs")
